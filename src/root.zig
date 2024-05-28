@@ -62,19 +62,11 @@ pub const Headers = struct {
     }
 };
 
-test "Headers append()" {
-    var headers = try Headers.init(testing.allocator, null);
-    defer headers.deinit();
-    try headers.append("Content-Type", "text/html; charset=UTF-8");
-
-    var headersList = std.ArrayList(struct { []const u8, []const u8 }).init(testing.allocator);
-    defer headersList.deinit();
-    var iterator = headers.iterator();
-    while (iterator.next()) |e| try headersList.append(e);
-    std.debug.print("{s}: {s}\n", .{ headersList.items[0][0], headersList.items[0][1] });
-}
-
-pub const Response = struct {};
+pub const Response = struct {
+    pub fn deinit(self: *Response) void {
+        _ = self;
+    }
+};
 
 pub fn fetch(allocator: std.mem.Allocator) !Response {
     var client = std.http.Client{ .allocator = allocator };
@@ -99,6 +91,17 @@ pub fn fetch(allocator: std.mem.Allocator) !Response {
     return Response{};
 }
 
-test "fetch()" {
-    _ = try fetch(testing.allocator);
+test "fetch(\"https://jsonplaceholder.typicode.com/todos/1\")" {
+    const Todo = struct {
+        userId: i64,
+        id: i64,
+        title: []const u8,
+        completed: bool,
+    };
+    var response = try fetch(testing.allocator, .{ .string = "https://jsonplaceholder.typicode.com/todos/1" }, null);
+    defer response.deinit();
+    const parsed = try response.json(Todo);
+    defer parsed.deinit();
+    const todo = parsed.value;
+    std.debug.print("{any}", .{todo});
 }
